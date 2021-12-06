@@ -1,0 +1,64 @@
+*,
+ ::before,
+ ::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #1a1e25;
+    color: #abb2bf;
+    font: 16px 'Consolas', sans-serif;
+}
+
+#log {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    padding: 16px;
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: start;
+    overflow-wrap: anywhere;
+}
+
+#log>div {
+    display: contents;
+}
+
+.server {
+    color: #bb86fc;
+}
+
+.client {
+    color: #03dac6;
+}
+
+.uuid {
+    color: white;
+    border-radius: 3px;
+    padding: 1px 3px;
+}
+
+#send-data {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    padding: 50px;
+    font-size: 1em;
+}
+
+@keyframes flash {
+    from {
+        background: rgba(200, 200, 200, 0.2);
+    }
+    to {
+        background: transparent;
+    }
+}
+
+#log>div>* {
+    padding: 3px 5px;
+    border-radius: 3px;
+    animation: flash 2s ease-out;
+}
