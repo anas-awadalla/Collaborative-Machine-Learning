@@ -1,9 +1,13 @@
-from flask import Flask, render_template, request, copy_current_request_context
-from flask_socketio import ConnectionRefusedError, SocketIO, emit, disconnect
+from collections import defaultdict
 import logging
-import numpy as np
-from random import randint
 import sys
+from random import randint
+
+import numpy as np
+from flask import Flask, render_template, request
+from flask_socketio import ConnectionRefusedError, SocketIO, emit
+
+from model import mnist_model
 
 # Do not log GET/POST requests
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -12,10 +16,12 @@ app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
 socketio = SocketIO(app, ping_interval=1, ping_timeout=2)
 
-# TODO: technically not thread safe
+# TODO?: technically not thread safe
 num_connections = 0
 connection_counter = 0 # monotonically increases
-sidToUuid = dict()  # maps socket id to connection's uuid
+sidToUuid = {}  # maps socket id to connection's uuid
+
+model = mnist_model()
 parameters = np.array([randint(0, 10) for _ in range(5)])
 gradients_queue = []
 
@@ -24,9 +30,25 @@ def average_gradients():
     if len(gradients_queue) < 5:
         # don't do anything if too few gradients
         return False
-    avg = np.mean(gradients_queue, axis=0).astype(int).tolist()
-    parameters = (parameters + avg).astype(int)
-    serverlog(f'Averaged {len(gradients_queue)} gradients into {parameters}')
+
+    model_gradients = {}
+    # TODO: update to factor in multiple layers
+    for client_gradient in gradients_queue:
+        for layer in client_gradient: # Sum up all the gradients
+            if layer in model_gradients:
+                model_gradients[layer] += client_gradient[layer]
+            else:
+                model_gradients[layer] = client_gradient[layer]
+
+    for layer in model_gradients: # Average all the gradients
+        model_gradients[layer] /= len(gradients_queue)
+
+    # avg = np.mean(gradients_queue, axis=0).astype(int).tolist()    
+    # parameters = (parameters + avg).astype(int)
+
+    # model.update_weights(model_gradients)
+    
+    serverlog(f'Averaged {len(gradients_queue)} gradients') # into {parameters}')
     gradients_queue = []
     return True
 
@@ -85,6 +107,6 @@ if __name__ == '__main__':
     try:
         PORT = int(sys.argv[1])
     except IndexError:
-        PORT = 5000
+        PORT = 8080
     print(f'Listening on port {PORT} on {HOST}')
     socketio.run(app, host=HOST, port=PORT)

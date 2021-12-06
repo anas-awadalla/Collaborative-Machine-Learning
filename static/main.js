@@ -46,9 +46,8 @@ function log(text, type) {
     logEl.appendChild(eventType);
     logEl.appendChild(span);
     document.getElementById('log').appendChild(logEl);
-    console.log(text);
-
     window.scrollTo(0, document.body.scrollHeight);
+    console.log(text);
 }
 log.CLIENT = 'client';
 log.SERVER = 'server';
@@ -63,6 +62,9 @@ const socket = io('/', {
 
 socket.on('connect', () => {
     log('Connected to server');
+
+    // TODO: download random subset of the data batches
+    // log(`Downloaded batches ${batchIds}`)
 });
 
 socket.on('disconnect', (reason) => {
@@ -83,11 +85,6 @@ document.getElementById('send-data').addEventListener('click', () => {
     socket.emit('client data', { gradients: gradients });
 });
 
-// TODO: actual model
-let model = {
-    parameters: []
-};
-
 function computeGradient() {
     // TODO
 
@@ -100,6 +97,6 @@ function computeGradient() {
 
 function setModelParameters(parameters) {
     // TODO
-    model.parameters = parameters;
+    // model.parameters = parameters;
     log(`Set model parameters to [${parameters}]`);
 }

@@ -9,7 +9,7 @@
 body {
     background: #1a1e25;
     color: #abb2bf;
-    font: 16px 'Consolas', sans-serif;
+    font: 16px 'Consolas', monospace;
 }
 
 #log {
