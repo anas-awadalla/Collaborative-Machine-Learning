@@ -66,7 +66,7 @@ def serverlog(content):
 def send_parameters():
     # TODO: Send file to client by extracting weights from model and puting in a dictionary layerwise
     model_parameters = model.get_weights()
-    emit('parameter update', {
+    socketio.emit('parameter update', {
         'parameters': model_parameters
     })
     serverlog('Sent updated parameters to all clients')
@@ -79,15 +79,15 @@ def index():
     uuid = f"{''.join(chr(randint(ord('A'), ord('Z'))) for _ in range(4))}{(connection_counter % 100):02}"
     return render_template('index.html', uuid=uuid)
 
-@socketio.on('client data')
-def receive_client_gradient(message):
-    gradients = message['gradients']
-    uuid = sidToUuid.get(request.sid, 'Unknown')
+@app.route('/gradient/<uuid>', methods=['POST'])
+def on_gradient_http(uuid):
+    gradients = request.get_json()
     gradients_queue.append(gradients)
     serverlog(f'Received gradients from {uuid} Queue length: {len(gradients_queue)}')
 
     if average_gradients():
         send_parameters()
+    return ('', 204)
 
 @socketio.on('connect')
 def connect(auth):
