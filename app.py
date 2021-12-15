@@ -1,15 +1,28 @@
 from collections import defaultdict
 import logging
-from os import read
 import sys
 from random import randint
+import requests
+import ssl
 
-import numpy as np
 from flask import Flask, render_template, request
-from flask_socketio import ConnectionRefusedError, SocketIO, emit
+from flask_socketio import ConnectionRefusedError, SocketIO
 import tensorflow as tf
 
 from model import mnist_model
+
+# Disable SSL certificate verification for downloading test data
+requests.packages.urllib3.disable_warnings()
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+################################################################################
 
 # Do not log GET/POST requests
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -49,7 +62,6 @@ def average_gradients():
     # serverlog('Averaging gradients')
     
     # print(model_gradients)
-
     model.update_weights(model_gradients)
 
     serverlog(f'Averaged {len(gradients_queue)} gradients')
@@ -85,6 +97,12 @@ def on_gradient_http(uuid):
 
     if average_gradients():
         send_parameters()
+    
+    serverlog('Testing model on server')
+    scores = model.test_model()
+    
+    serverlog(f'Test loss: {scores[0]}')
+    serverlog(f'Test accuracy: {scores[1]}')
     return ('', 204)
 
 @socketio.on('connect')
