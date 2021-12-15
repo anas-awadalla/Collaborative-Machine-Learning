@@ -89,7 +89,9 @@ document.getElementById("send-data").addEventListener("click", async() => {
     log("Start gradient computation");
     // Training Data
     let { xs, ys } = await dataloader.getNextBatch();
-    // console.log("xs, ys", xs, ys);
+    // Reshape xs to be 28 28
+    xs = xs.reshape([xs.shape[0], 28, 28, 1]);
+    // console.log("xs, shape", xs, xs.shape);
     let gradients = await model.getGradients(xs, ys);
 
     let string = JSON.stringify(gradients);

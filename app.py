@@ -16,7 +16,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
-socketio = SocketIO(app, ping_interval=5000, ping_timeout=2500)
+socketio = SocketIO(app, ping_interval=25, ping_timeout=25)
 
 # TODO?: technically not thread safe
 num_connections = 0
@@ -48,7 +48,7 @@ def average_gradients():
     
     # serverlog('Averaging gradients')
     
-    print(model_gradients)
+    # print(model_gradients)
 
     model.update_weights(model_gradients)
 
