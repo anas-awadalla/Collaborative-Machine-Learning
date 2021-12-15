@@ -16,7 +16,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
-socketio = SocketIO(app, ping_interval=2, ping_timeout=20)
+socketio = SocketIO(app, ping_interval=5000, ping_timeout=2500)
 
 # TODO?: technically not thread safe
 num_connections = 0
@@ -26,18 +26,17 @@ sidToUuid = {}  # maps socket id to connection's uuid
 model = mnist_model()
 # model.save_weights("static/mnistmodel")
 
-parameters = np.array([randint(0, 10) for _ in range(5)])
 gradients_queue = []
 
 def average_gradients():
-    global gradients_queue, parameters
-    if len(gradients_queue) < 2:
+    global gradients_queue
+    if len(gradients_queue) < 1:
         # don't do anything if too few gradients
         return False
 
     model_gradients = []
     for client_gradient in gradients_queue:
-        print(f"Client Keys: {client_gradient.keys()}")
+        # print(f"Client Keys: {client_gradient.keys()}")
         for i, layer in enumerate(client_gradient): # Sum up all the gradients
             if i < len(model_gradients):
                 model_gradients[i] += tf.convert_to_tensor(client_gradient[layer])
@@ -46,11 +45,11 @@ def average_gradients():
 
     for i, _ in enumerate(model_gradients): # Average all the gradients
         model_gradients[i] /= len(gradients_queue)
-        # model_gradients[i] = tf.tensor(model_gradients[i])
     
-    # serverlog('Average gradients: {}'.format(model_gradients))
-    serverlog('Averaging gradients')
+    # serverlog('Averaging gradients')
     
+    print(model_gradients)
+
     model.update_weights(model_gradients)
 
     serverlog(f'Averaged {len(gradients_queue)} gradients')
@@ -64,7 +63,6 @@ def serverlog(content):
     print(content)
 
 def send_parameters():
-    # TODO: Send file to client by extracting weights from model and puting in a dictionary layerwise
     model_parameters = model.get_weights()
     emit('parameter update', {
         'parameters': model_parameters

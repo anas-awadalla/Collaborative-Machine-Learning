@@ -35,8 +35,8 @@ class MnistModel {
 
     async getGradients(xs, ys) {
         await this.loadPromise;
+
         for (let epoch = 0; epoch < 1; epoch++) {
-            // TODO: use actual dataset
             console.log("Epoch", epoch);
             const { value, grads } = tf.variableGrads(() => {
                 const predYs = this.model.predict(xs);
@@ -57,7 +57,7 @@ class MnistModel {
                     grads[variable_Name].arraySync(),
                 ])
             );
-            // console.log('res', res);
+            console.log('res', res);
             return res;
         }
     }

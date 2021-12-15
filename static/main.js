@@ -90,8 +90,8 @@ document.getElementById('send-data').addEventListener('click', async() => {
     let { xs, ys } = await dataloader.getNextBatch();
     console.log('xs, ys', xs, ys);
     let gradients = await model.getGradients(xs, ys);
-    log(`Sent gradients to server = [${gradients}]`);
     socket.emit('client data', {
         gradients: gradients
     });
+    log(`Sent gradients to server`);
 });
