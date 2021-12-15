@@ -21,4 +21,4 @@ class mnist_model():
         self.optimizer.apply_gradients(zip(avg_gradient, self.model.trainable_weights))
     
     def save_weights(self, path):
-            tfjs.converters.save_keras_model(this.model, path)
+            tfjs.converters.save_keras_model(self.model, path)

@@ -1,3 +1,25 @@
+const TRAIN_DATA_SIZE = 10;
+class MnistData {
+    constructor() {
+        this.data = new TfMnistData();
+        const startTime = Date.now();
+        return new Promise(async resolve => {
+            await this.data.load();
+            const execTime = Date.now() - startTime;
+            console.log(`Loaded data in ${execTime}ms`);
+            resolve(this);
+        });
+    }
+
+    getNextBatch() {
+        const { xs, labels } = this.data.nextTrainBatch(TRAIN_DATA_SIZE);
+        return {
+            xs,
+            ys: labels,
+        };
+    }
+}
+
 class MnistModel {
     constructor() {
         console.log('Loading model...');
@@ -23,7 +45,6 @@ class MnistModel {
                 return loss;
             });
 
-            // });
             console.log('Grad', grads);
             console.log('Epoch', epoch);
 
@@ -41,15 +62,19 @@ class MnistModel {
     }
 }
 
-// Training data
-const xs = tf.ones([10, 784]);
-const ys = tf.ones([10, 10]);
 
 async function doStuff() {
     console.log('doStuff() called');
+
+    const data = await new MnistData();
+    // Training data
+    const { xs, ys } = data.getNextBatch();
+    console.log('xs, ys', xs, ys);
+
     let model2 = await new MnistModel();
     console.log('Loaded model2');
     await model2.train(xs, ys);
+    console.log('Trained model2');
 }
 doStuff();
 
