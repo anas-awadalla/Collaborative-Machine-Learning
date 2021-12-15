@@ -38,13 +38,13 @@ def average_gradients():
         print(f"Client Keys: {client_gradient.keys()}")
         for i, layer in enumerate(client_gradient): # Sum up all the gradients
             if i < len(model_gradients):
-                model_gradients[i] += client_gradient[layer]
+                model_gradients[i] += tf.convert_to_tensor(client_gradient[layer])
             else:
-                model_gradients.append(client_gradient[layer])
+                model_gradients.append(tf.convert_to_tensor(client_gradient[layer]))
 
     for i, _ in enumerate(model_gradients): # Average all the gradients
         model_gradients[i] /= len(gradients_queue)
-        model_gradients[i] = tf.tensor(model_gradients[i])
+        # model_gradients[i] = tf.tensor(model_gradients[i])
     
     serverlog('Average gradients: {}'.format(model_gradients))
     

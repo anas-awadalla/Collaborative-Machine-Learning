@@ -29,6 +29,6 @@ class mnist_model():
         for layer in self.model.layers:
             # iterate through kernels and bias weights
             for weight in layer.weights:
-                weights[weight.name] = weight.numpy().tolist()
+                weights[weight.name[:-2]] = weight.numpy().tolist()
         print(weights.keys())
         return weights
