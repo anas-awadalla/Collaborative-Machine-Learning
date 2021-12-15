@@ -1,4 +1,4 @@
-from collections import defaultdict
+import json
 import logging
 import sys
 from random import randint
@@ -37,13 +37,27 @@ connection_counter = 0 # monotonically increases
 sidToUuid = {}  # maps socket id to connection's uuid
 
 model = mnist_model()
-# model.save_weights("static/mnistmodel")
+reset_model = True
+if reset_model:
+    model.save_weights("static/mnistmodel")
+
+    # Hack to get tensorflowjs to load model architecture
+    with open('static/mnistmodel/model.json', 'r+') as f:
+        data = json.load(f)
+        data["modelTopology"]['model_config']['class_name'] = 'Model'
+        f.seek(0)
+        json.dump(data, f, indent=4)
+        f.truncate()
+
 
 gradients_queue = []
 
 def average_gradients():
     global gradients_queue
-    if len(gradients_queue) < 1:
+    if num_connections == 0:
+        return False
+
+    if len(gradients_queue) < num_connections:
         # don't do anything if too few gradients
         return False
 
