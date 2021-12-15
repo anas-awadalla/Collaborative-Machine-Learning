@@ -18,7 +18,7 @@ class mnist_model():
         x = layers.Dense(10, activation='softmax', name='dense')(x)
         self.model = keras.Model(inputs=inputs, outputs=x)
 
-        self.optimizer = keras.optimizers.Adam(learning_rate=1e-2)
+        self.optimizer = keras.optimizers.Adam(learning_rate=5e-4)
 
     def update_weights(self, avg_gradient):
         self.optimizer.apply_gradients(zip(avg_gradient, self.model.trainable_weights))
