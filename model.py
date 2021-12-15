@@ -2,7 +2,6 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflowjs as tfjs
-import numpy as np
 class mnist_model():
     """
     Model for MNIST
@@ -18,7 +17,7 @@ class mnist_model():
         self.model.compile(optimizer='adam',
                         loss='categorical_crossentropy',
                         metrics=[['categorical_crossentropy'],['accuracy']])
-        self.optimizer = keras.optimizers.Adam(learning_rate=5e-4)
+        self.optimizer = keras.optimizers.Adam(learning_rate=1e-3)
 
 
     def update_weights(self, avg_gradient):
