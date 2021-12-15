@@ -1,17 +1,19 @@
-const TRAIN_DATA_SIZE = 10;
+const TRAIN_DATA_SIZE = 200;
 class MnistData {
     constructor() {
         this.data = new TfMnistData();
+        this.loadPromise = this.data.load();
+
+        // time how long loading takes
         const startTime = Date.now();
-        return new Promise(async resolve => {
-            await this.data.load();
+        this.loadPromise.then(() => {
             const execTime = Date.now() - startTime;
             console.log(`Loaded data in ${execTime}ms`);
-            resolve(this);
         });
     }
 
-    getNextBatch() {
+    async getNextBatch() {
+        await this.loadPromise;
         const { xs, labels } = this.data.nextTrainBatch(TRAIN_DATA_SIZE);
         return {
             xs,
@@ -22,105 +24,65 @@ class MnistData {
 
 class MnistModel {
     constructor() {
-        console.log('Loading model...');
-        return new Promise(async resolve => {
-            this.model = await tf.loadLayersModel('/static/mnistmodel/model.json');
-            console.log('Loaded model from mnistmodel');
-            resolve(this);
+        console.log("Loading model...");
+        this.model = null;
+        this.loadPromise = tf.loadLayersModel("/static/mnistmodel/model.json");
+        this.loadPromise.then((model) => {
+            this.model = model;
+            console.log("Loaded model from mnistmodel");
         });
     }
 
-    async train(xs, ys) {
-        // TODO
-        // const optimizer = tf.train.sgd(0.1 /* learningRate */ );
-        // Train for 5 epochs.
-        // total_gradient =
-        for (let epoch = 0; epoch < 5; epoch++) {
-            // TODO get dataset
-            // await dataset.forEachAsync(({ xs, ys }) => {
+    async getGradients(xs, ys) {
+        await this.loadPromise;
+        for (let epoch = 0; epoch < 1; epoch++) {
+            // TODO: use actual dataset
+            console.log("Epoch", epoch);
             const { value, grads } = tf.variableGrads(() => {
                 const predYs = this.model.predict(xs);
+                console.log("Ran forward pass");
                 const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
-                loss.data().then(l => console.log('Loss', l));
+                console.log("Computed loss");
+                loss.data().then((l) => console.log("Loss", l));
                 return loss;
             });
 
-            console.log('Grad', grads);
-            console.log('Epoch', epoch);
+            // console.log('Grad', grads);
+            // console.log('Epoch', epoch);
 
-            Object.keys(grads).forEach(variable_Name => console.log(variable_Name, grads[variable_Name].arraySync()));
+            // Object.keys(grads).forEach(variable_Name => console.log(variable_Name, grads[variable_Name].arraySync()));
+            const res = Object.fromEntries(
+                Object.keys(grads).map((variable_Name) => [
+                    variable_Name,
+                    grads[variable_Name].arraySync(),
+                ])
+            );
+            // console.log('res', res);
+            return res;
         }
-
     }
 
-    updateWeights(weightDict) {
-        // TODO
-    }
-
-    getGradients() {
-        // TODO
+    async updateWeights(weightDict) {
+        console.log("weightDict", weightDict);
+        // TODO: update weights of tensorflow model using a variable containing the weights
+        this.model.layers.forEach((layer) => {
+            // Set kernel and bias if they exist
+            console.log("layer.name =", layer.name, layer);
+            if (
+                weightDict[layer.name + "/kernel"] &&
+                weightDict[layer.name + "/bias"]
+            ) {
+                layer.setWeights([
+                    tf.tensor(weightDict[layer.name + "/kernel"]),
+                    tf.tensor(weightDict[layer.name + "/bias"]),
+                ]);
+            }
+        });
     }
 }
 
+const dataloader = new MnistData();
 
-async function doStuff() {
-    console.log('doStuff() called');
-
-    const data = await new MnistData();
-    // Training data
-    const { xs, ys } = data.getNextBatch();
-    console.log('xs, ys', xs, ys);
-
-    let model2 = await new MnistModel();
-    console.log('Loaded model2');
-    await model2.train(xs, ys);
-    console.log('Trained model2');
-}
-doStuff();
-
-// we need this for now so main.js doesn't break
-// TODO: actual model
-let model = {
-    parameters: [],
-};
-
-
-
-
-// const optimizer = tf.train.sgd(0.1 /* learningRate */ );
-// // Train for 5 epochs.
-// for (let epoch = 0; epoch < 5; epoch++) {
-//     await ds.forEachAsync(({ xs, ys }) => {
-//         optimizer.minimize(() => {
-//             const predYs = model(xs);
-//             const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
-//             loss.data().then(l => console.log('Loss', l));
-//             return loss;
-//         });
-//     });
-//     console.log('Epoch', epoch);
-// }
-
-
-// minimize(f: () => Scalar, returnCost = false, varList ? : Variable[]): Scalar |
-//     null {
-//         const { value, grads } = this.computeGradients(f, varList);
-
-//         if (varList != null) {
-//             const gradArray: NamedTensor[] =
-//                 varList.map(v => ({ name: v.name, tensor: grads[v.name] }));
-//             this.applyGradients(gradArray);
-//         } else {
-//             this.applyGradients(grads);
-//         }
-
-//         // Dispose gradients.
-//         dispose(grads);
-
-//         if (returnCost) {
-//             return value;
-//         } else {
-//             value.dispose();
-//             return null;
-//         }
-//     }
+console.log("Initializing Model...");
+const model = new MnistModel();
+console.log("Loaded model");

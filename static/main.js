@@ -75,28 +75,23 @@ socket.on('server log', (data) => {
     log(data.log, log.SERVER);
 });
 
-socket.on('parameter update', (data) => {
-    setModelParameters(data.parameters);
+socket.on('parameter update', async(data) => {
+    // Call an async function in a socket event handler
+    log(`Received parameter update from server`);
+    await model.updateWeights(data.parameters);
+    log(`Successfully updated weights of client`);
 });
 
-document.getElementById('send-data').addEventListener('click', () => {
-    const gradients = computeGradient();
-    log(`Sent gradients [${gradients}] to server`);
-    socket.emit('client data', { gradients: gradients });
+document.getElementById('send-data').addEventListener('click', async() => {
+    log('Start gradient computation');
+    // Training Data
+    // let xs = tf.ones([10, 784]);
+    // let ys = tf.ones([10, 10]);
+    let { xs, ys } = await dataloader.getNextBatch();
+    console.log('xs, ys', xs, ys);
+    let gradients = await model.getGradients(xs, ys);
+    log(`Sent gradients to server = [${gradients}]`);
+    socket.emit('client data', {
+        gradients: gradients
+    });
 });
-
-function computeGradient() {
-    // TODO
-
-    // random array
-    let gradients = model.parameters.map(_ => Math.floor(Math.random() * 10) - 5)
-
-    log(`Computed gradient = [${gradients}]`);
-    return gradients;
-}
-
-function setModelParameters(parameters) {
-    // TODO
-    // model.parameters = parameters;
-    log(`Set model parameters to [${parameters}]`);
-}
