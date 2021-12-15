@@ -54,7 +54,10 @@ gradients_queue = []
 
 def average_gradients():
     global gradients_queue
-    if len(gradients_queue) < 1:
+    if num_connections == 0:
+        return False
+
+    if len(gradients_queue) < num_connections:
         # don't do anything if too few gradients
         return False
 
@@ -108,12 +111,12 @@ def on_gradient_http(uuid):
 
     if average_gradients():
         send_parameters()
-    
-    serverlog('Testing model on server')
-    scores = model.test_model()
-    
-    serverlog(f'Test loss: {scores[0]}')
-    serverlog(f'Test accuracy: {scores[1]}')
+
+        serverlog('Testing model on server')
+        scores = model.test_model()
+        
+        serverlog(f'Test loss: {scores[0]}')
+        serverlog(f'Test accuracy: {scores[1]}')
     return ('', 204)
 
 @socketio.on('connect')

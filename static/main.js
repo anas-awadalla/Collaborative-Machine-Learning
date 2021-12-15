@@ -85,27 +85,63 @@ socket.on("parameter update", async(data) => {
     log(`Successfully updated weights of client`);
 });
 
-document.getElementById("send-data").addEventListener("click", async() => {
-    log("Start gradient computation");
-    // Training Data
-    let { xs, ys } = await dataloader.getNextBatch();
-    // Reshape xs to be 28 28
-    xs = xs.reshape([xs.shape[0], 28, 28, 1]);
-    // console.log("xs, shape", xs, xs.shape);
-    let gradients = await model.getGradients(xs, ys);
+async function asyncModelUpdate(gradients) {
+    let gradientString = JSON.stringify(gradients);
 
-    let string = JSON.stringify(gradients);
+    return new Promise(async function (resolve, reject) {
+        log(
+            `Sent gradients to server. Size = ${gradientString.length} bytes`
+        );
 
-    log(
-        `Sent gradients to server. Size = ${string.length} bytes`
-    );
+        await fetch(`/gradient/${UUID}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: gradientString,
+        });
+        log(`Sent gradients to server`);
 
-    await fetch(`/gradient/${UUID}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: string,
+        socket.on("parameter update", async(data) => {
+            log(`Received parameter update from server`);
+            await model.updateWeights(data.parameters);
+            log(`Successfully updated weights of client`);
+            resolve();
+        });
+        setTimeout(reject, 100000);
     });
-    log(`Sent gradients to server`);
+  }
+
+document.getElementById("send-data").addEventListener("click", async() => { 
+    while (true) {
+        log("Start gradient computation");
+        let { xs, ys } = await dataloader.getNextBatch();
+        // Reshape xs to be 28 28
+        xs = xs.reshape([xs.shape[0], 28, 28, 1]);
+        await asyncModelUpdate(await model.getGradients(xs, ys));
+        log("End gradient computation");
+        // Sleep for a 1 second
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    // log("Start gradient computation");
+    // // Training Data
+    // let { xs, ys } = await dataloader.getNextBatch();
+    // // Reshape xs to be 28 28
+    // xs = xs.reshape([xs.shape[0], 28, 28, 1]);
+    // let gradients = await model.getGradients(xs, ys);
+
+    // let string = JSON.stringify(gradients);
+
+    // log(
+    //     `Sent gradients to server. Size = ${string.length} bytes`
+    // );
+
+    // await fetch(`/gradient/${UUID}`, {
+    //     method: "POST",
+    //     headers: {
+    //         "Content-Type": "application/json",
+    //     },
+    //     body: string,
+    // });
+    // log(`Sent gradients to server`);
 });

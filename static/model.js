@@ -1,4 +1,4 @@
-const TRAIN_DATA_SIZE = 200;
+const TRAIN_DATA_SIZE = 500;
 class MnistData {
     constructor() {
         this.data = new TfMnistData();
