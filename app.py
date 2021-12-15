@@ -16,7 +16,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
-socketio = SocketIO(app, ping_interval=1, ping_timeout=2)
+socketio = SocketIO(app, ping_interval=2, ping_timeout=20)
 
 # TODO?: technically not thread safe
 num_connections = 0
@@ -24,12 +24,14 @@ connection_counter = 0 # monotonically increases
 sidToUuid = {}  # maps socket id to connection's uuid
 
 model = mnist_model()
+# model.save_weights("static/mnistmodel")
+
 parameters = np.array([randint(0, 10) for _ in range(5)])
 gradients_queue = []
 
 def average_gradients():
     global gradients_queue, parameters
-    if len(gradients_queue) < 1:
+    if len(gradients_queue) < 2:
         # don't do anything if too few gradients
         return False
 
@@ -46,7 +48,8 @@ def average_gradients():
         model_gradients[i] /= len(gradients_queue)
         # model_gradients[i] = tf.tensor(model_gradients[i])
     
-    serverlog('Average gradients: {}'.format(model_gradients))
+    # serverlog('Average gradients: {}'.format(model_gradients))
+    serverlog('Averaging gradients')
     
     model.update_weights(model_gradients)
 

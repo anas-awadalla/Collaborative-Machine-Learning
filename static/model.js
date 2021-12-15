@@ -1,3 +1,27 @@
+const TRAIN_DATA_SIZE = 200;
+class MnistData {
+    constructor() {
+        this.data = new TfMnistData();
+        this.loadPromise = this.data.load();
+
+        // time how long loading takes
+        const startTime = Date.now();
+        this.loadPromise.then(() => {
+            const execTime = Date.now() - startTime;
+            console.log(`Loaded data in ${execTime}ms`);
+        });
+    }
+
+    async getNextBatch() {
+        await this.loadPromise;
+        const { xs, labels } = this.data.nextTrainBatch(TRAIN_DATA_SIZE);
+        return {
+            xs,
+            ys: labels,
+        };
+    }
+}
+
 class MnistModel {
     constructor() {
         console.log("Loading model...");
@@ -52,23 +76,12 @@ class MnistModel {
                     tf.tensor(weightDict[layer.name + "/kernel"]),
                     tf.tensor(weightDict[layer.name + "/bias"]),
                 ]);
-                // console.log(layer.kernel, tf.tensor(weightDict[layer.name + '/kernel']));
-                // layer.kernel = tf.tensor(weightDict[layer.name + '/kernel']);
             }
-            // if (weightDict[layer.name + '/bias']) {
-            //     layer.bias = tf.tensor(weightDict[layer.name + '/bias']);
-            // }
-            // if (layer.kernel) {
-            //     console.log('kernel')
-            //     layer.kernel = weightDict[layer.name + ' kernel'];
-            // }
-            // if (layer.bias) {
-            //     console.log('bias')
-            //     layer.bias = weightDict[layer.name + ' bias'];
-            // }
         });
     }
 }
+
+const dataloader = new MnistData();
 
 console.log("Initializing Model...");
 const model = new MnistModel();

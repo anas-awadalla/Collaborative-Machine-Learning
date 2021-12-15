@@ -85,8 +85,10 @@ socket.on('parameter update', async(data) => {
 document.getElementById('send-data').addEventListener('click', async() => {
     log('Start gradient computation');
     // Training Data
-    let xs = tf.ones([10, 784]);
-    let ys = tf.ones([10, 10]);
+    // let xs = tf.ones([10, 784]);
+    // let ys = tf.ones([10, 10]);
+    let { xs, ys } = await dataloader.getNextBatch();
+    console.log('xs, ys', xs, ys);
     let gradients = await model.getGradients(xs, ys);
     log(`Sent gradients to server = [${gradients}]`);
     socket.emit('client data', {
