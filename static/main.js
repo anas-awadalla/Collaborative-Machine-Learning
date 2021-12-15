@@ -37,7 +37,7 @@ function log(text, type) {
     span.innerHTML = span.innerHTML
         .split(" ")
         .map((s) =>
-            s.length === 6 && s === s.toUpperCase() ?
+            /[A-Z]{4}[0-9]{2}/.test(s) ?
             `<span class='uuid' style='background:${getColor(s)}'>${s}</span>` :
             s
         )

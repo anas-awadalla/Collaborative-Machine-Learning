@@ -101,8 +101,7 @@ def on_gradient_http(uuid):
     serverlog('Testing model on server')
     scores = model.test_model()
     
-    serverlog(f'Test loss: {scores[0]}')
-    serverlog(f'Test accuracy: {scores[1]}')
+    serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
     return ('', 204)
 
 @socketio.on('connect')
