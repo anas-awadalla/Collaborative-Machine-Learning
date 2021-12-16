@@ -1,6 +1,7 @@
-const TRAIN_DATA_SIZE = 500;
+const INITIAL_BATCH_SIZE = 500;
 class MnistData {
     constructor() {
+        this.batchSize = INITIAL_BATCH_SIZE;
         this.data = new TfMnistData();
         this.loadPromise = this.data.load();
 
@@ -12,9 +13,17 @@ class MnistData {
         });
     }
 
+    setBatchSize(batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    getBatchSize() {
+        return this.batchSize;
+    }
+
     async getNextBatch() {
         await this.loadPromise;
-        const { xs, labels } = this.data.nextTrainBatch(TRAIN_DATA_SIZE);
+        const { xs, labels } = this.data.nextTrainBatch(this.batchSize);
         return {
             xs,
             ys: labels,
@@ -47,10 +56,8 @@ class MnistModel {
                 return loss;
             });
 
-            // console.log('Grad', grads);
-            // console.log('Epoch', epoch);
+            // console.log('Grad, Epoch', grads, epoch);
 
-            // Object.keys(grads).forEach(variable_Name => console.log(variable_Name, grads[variable_Name].arraySync()));
             const res = Object.fromEntries(
                 Object.keys(grads).map((variable_Name) => [
                     variable_Name,
@@ -64,7 +71,6 @@ class MnistModel {
 
     async updateWeights(weightDict) {
         console.log("weightDict", weightDict);
-        // TODO: update weights of tensorflow model using a variable containing the weights
         this.model.layers.forEach((layer) => {
             // Set kernel and bias if they exist
             console.log("layer.name =", layer.name, layer);

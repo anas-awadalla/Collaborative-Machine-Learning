@@ -37,7 +37,7 @@ connection_counter = 0 # monotonically increases
 sidToUuid = {}  # maps socket id to connection's uuid
 
 model = mnist_model()
-reset_model = True
+reset_model = False
 if reset_model:
     model.save_weights("static/mnistmodel")
 
@@ -50,7 +50,7 @@ if reset_model:
         f.truncate()
 
 
-gradients_queue = []
+gradients_queue = []  # list of tuples (batch_size, gradient)
 
 def average_gradients():
     global gradients_queue
@@ -62,17 +62,16 @@ def average_gradients():
         return False
 
     model_gradients = []
-    for client_gradient in gradients_queue:
+    total_batch_size = sum(batch_size for (batch_size, _) in gradients_queue)
+    for (batch_size, client_gradient) in gradients_queue:
         # print(f"Client Keys: {client_gradient.keys()}")
         for i, layer in enumerate(client_gradient): # Sum up all the gradients
+            gradient_tensor = tf.convert_to_tensor(client_gradient[layer]) * (batch_size / total_batch_size)
             if i < len(model_gradients):
-                model_gradients[i] += tf.convert_to_tensor(client_gradient[layer])
+                model_gradients[i] += gradient_tensor
             else:
-                model_gradients.append(tf.convert_to_tensor(client_gradient[layer]))
+                model_gradients.append(gradient_tensor)
 
-    for i, _ in enumerate(model_gradients): # Average all the gradients
-        model_gradients[i] /= len(gradients_queue)
-    
     # serverlog('Averaging gradients')
     
     # print(model_gradients)
@@ -103,20 +102,16 @@ def index():
     uuid = f"{''.join(chr(randint(ord('A'), ord('Z'))) for _ in range(4))}{(connection_counter % 100):02}"
     return render_template('index.html', uuid=uuid)
 
-@app.route('/gradient/<uuid>', methods=['POST'])
-def on_gradient_http(uuid):
+@app.route('/gradient/<uuid>/<int:batch_size>', methods=['POST'])
+def on_gradient_http(uuid, batch_size):
     gradients = request.get_json()
-    gradients_queue.append(gradients)
+    gradients_queue.append((batch_size, gradients))
     serverlog(f'Received gradients from {uuid} Queue length: {len(gradients_queue)}')
 
     if average_gradients():
         send_parameters()
-
-        serverlog('Testing model on server')
         scores = model.test_model()
-        
-        serverlog(f'Test loss: {scores[0]}')
-        serverlog(f'Test accuracy: {scores[1]}')
+        serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
     return ('', 204)
 
 @socketio.on('connect')

@@ -37,7 +37,7 @@ function log(text, type) {
     span.innerHTML = span.innerHTML
         .split(" ")
         .map((s) =>
-            s.length === 6 && s === s.toUpperCase() ?
+            /[A-Z]{4}[0-9]{2}/.test(s) ?
             `<span class='uuid' style='background:${getColor(s)}'>${s}</span>` :
             s
         )
@@ -75,72 +75,53 @@ socket.on("server log", (data) => {
     log(data.log, log.SERVER);
 });
 
+socket.on("batch size update", (data) => {
+    dataloader.setBatchSize(data.batchsize);
+    log(`Updated batch size to ${data.batchsize}`);
+});
+
+let shouldTrain = false;
+const sendDataButton = document.getElementById("send-data");
+sendDataButton.addEventListener("click", () => {
+    shouldTrain = !shouldTrain;
+    sendDataButton.innerHTML = shouldTrain ? 'Stop auto-training<br>(currently on)' : 'Start auto training<br>(currently off)';
+
+    if (shouldTrain) {
+        asyncModelUpdate();
+    }
+});
+
 socket.on("parameter update", async(data) => {
     // Call an async function in a socket event handler
     log(`Received parameter update from server`);
     await model.updateWeights(data.parameters);
     log(`Successfully updated weights of client`);
+
+    asyncModelUpdate();
 });
 
-async function asyncModelUpdate(gradients) {
-    let gradientString = JSON.stringify(gradients);
-
-    return new Promise(async function (resolve, reject) {
-        log(
-            `Sent gradients to server. Size = ${gradientString.length} bytes`
-        );
-
-        await fetch(`/gradient/${UUID}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: gradientString,
-        });
-        log(`Sent gradients to server`);
-
-        socket.on("parameter update", async(data) => {
-            log(`Received parameter update from server`);
-            await model.updateWeights(data.parameters);
-            log(`Successfully updated weights of client`);
-            resolve();
-        });
-        setTimeout(reject, 100000);
-    });
-  }
-
-document.getElementById("send-data").addEventListener("click", async() => { 
-    while (true) {
-        log("Start gradient computation");
-        let { xs, ys } = await dataloader.getNextBatch();
-        // Reshape xs to be 28 28
-        xs = xs.reshape([xs.shape[0], 28, 28, 1]);
-        await asyncModelUpdate(await model.getGradients(xs, ys));
-        log("End gradient computation");
-        // Artificial delay to simulate slower clients
-        let sleepTime = parseInt(document.getElementById("client-slowdown").textContent);
-        log(`Slowdown for ${sleepTime}ms`);
-        await new Promise((resolve) => setTimeout(resolve, sleepTime));
+async function asyncModelUpdate() {
+    if (!shouldTrain) {
+        return;
     }
-    // log("Start gradient computation");
-    // // Training Data
-    // let { xs, ys } = await dataloader.getNextBatch();
-    // // Reshape xs to be 28 28
-    // xs = xs.reshape([xs.shape[0], 28, 28, 1]);
-    // let gradients = await model.getGradients(xs, ys);
 
-    // let string = JSON.stringify(gradients);
+    log("Start gradient computation");
+    let { xs, ys } = await dataloader.getNextBatch();
+    xs = xs.reshape([xs.shape[0], 28, 28, 1]); // Reshape to be 28 28
+    const gradients = await model.getGradients(xs, ys);
+    log("End gradient computation");
 
-    // log(
-    //     `Sent gradients to server. Size = ${string.length} bytes`
-    // );
+    let gradientString = JSON.stringify(gradients);
+    log(
+        `Sending gradients to server. Size = ${gradientString.length} bytes`
+    );
 
-    // await fetch(`/gradient/${UUID}`, {
-    //     method: "POST",
-    //     headers: {
-    //         "Content-Type": "application/json",
-    //     },
-    //     body: string,
-    // });
-    // log(`Sent gradients to server`);
-});
+    await fetch(`/gradient/${UUID}/${dataloader.getBatchSize()}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: gradientString,
+    });
+    log(`Sent gradients to server`);
+}

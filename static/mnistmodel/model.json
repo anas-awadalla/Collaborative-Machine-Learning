@@ -1,7 +1,7 @@
 {
     "format": "layers-model",
     "generatedBy": "keras v2.7.0",
-    "convertedBy": "TensorFlow.js Converter v3.11.0",
+    "convertedBy": "TensorFlow.js Converter v3.12.0",
     "modelTopology": {
         "keras_version": "2.7.0",
         "backend": "tensorflow",
