@@ -59,6 +59,9 @@ function log(text, type) {
 log.CLIENT = "client";
 log.SERVER = "server";
 
+const INITIAL_SLOWDOWN = +(new URLSearchParams(window.location.search).get("slowdown") || 0);
+document.getElementById("client-slowdown").value = INITIAL_SLOWDOWN;
+
 log(`UUID = ${UUID}`);
 
 const socket = io("/", {
@@ -120,6 +123,13 @@ async function asyncModelUpdate() {
     // Time the model.getGradients call
     const computationStartTime = performance.now();
     log("Start gradient computation");
+
+    // Artificial delay to simulate slower clients
+    let sleepTime = parseInt(document.getElementById("client-slowdown").value);
+    if (sleepTime > 0) {
+        log(`Sleeping for ${sleepTime}ms (artificial slowdown)`);
+        await new Promise((resolve) => setTimeout(resolve, sleepTime));
+    }
 
     let { xs, ys } = await dataloader.getNextBatch();
     xs = xs.reshape([xs.shape[0], 28, 28, 1]); // Reshape to be 28 28
