@@ -65,9 +65,6 @@ const socket = io("/", {
 
 socket.on("connect", () => {
     log("Connected to server");
-
-    // TODO: download random subset of the data batches
-    // log(`Downloaded batches ${batchIds}`)
 });
 
 socket.on("disconnect", (reason) => {
@@ -120,8 +117,10 @@ document.getElementById("send-data").addEventListener("click", async() => {
         xs = xs.reshape([xs.shape[0], 28, 28, 1]);
         await asyncModelUpdate(await model.getGradients(xs, ys));
         log("End gradient computation");
-        // Sleep for a 1 second
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Artificial delay to simulate slower clients
+        let sleepTime = parseInt(document.getElementById("client-slowdown").textContent);
+        log(`Slowdown for ${sleepTime}ms`);
+        await new Promise((resolve) => setTimeout(resolve, sleepTime));
     }
     // log("Start gradient computation");
     // // Training Data
