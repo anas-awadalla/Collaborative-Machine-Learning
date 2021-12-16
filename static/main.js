@@ -69,9 +69,6 @@ const socket = io("/", {
 
 socket.on("connect", () => {
     log("Connected to server");
-
-    // TODO: download random subset of the data batches
-    // log(`Downloaded batches ${batchIds}`)
 });
 
 socket.on("disconnect", (reason) => {
@@ -122,17 +119,26 @@ async function asyncModelUpdate() {
         return;
     }
 
+    // Time the model.getGradients call
+    const computationStartTime = performance.now();
     log("Start gradient computation");
+
     let { xs, ys } = await dataloader.getNextBatch();
     xs = xs.reshape([xs.shape[0], 28, 28, 1]); // Reshape to be 28 28
     const gradients = await model.getGradients(xs, ys);
     log("End gradient computation");
+    
+    const computationEndTime = performance.now();
+    const computationtimeTaken = computationEndTime - computationStartTime;
+    log(`Gradient computation took ${computationtimeTaken}ms`);
 
     let gradientString = JSON.stringify(gradients);
     log(
         `Sending gradients to server. Size = ${gradientString.length} bytes`
     );
 
+    // Time how long it takes to send the data
+    const networkStartTime = performance.now();
     await fetch(`/gradient/${UUID}/${dataloader.getBatchSize()}`, {
         method: "POST",
         headers: {
@@ -141,4 +147,14 @@ async function asyncModelUpdate() {
         body: gradientString,
     });
     log(`Sent gradients to server`);
+    const networkEndTime = performance.now();
+    const networkTimeTaken = networkEndTime - networkStartTime;
+    log(`Gradient took ${networkTimeTaken}ms to send`);
+
+    // Send timing data and uuid to server
+    socket.emit("time log", {
+        'uuid': UUID,
+        'computation_time': computationtimeTaken,
+        'network_time': networkTimeTaken,
+    });
 }
