@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import logging
 import sys
@@ -51,6 +52,7 @@ if reset_model:
 
 
 gradients_queue = []  # list of tuples (batch_size, gradient)
+time_log = defaultdict(list)
 
 def average_gradients():
     global gradients_queue
@@ -113,6 +115,11 @@ def on_gradient_http(uuid, batch_size):
         scores = model.test_model()
         serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
     return ('', 204)
+
+@socketio.on('time log')
+def on_time_log(data):
+    serverlog(f'Received time log from {data["uuid"]} with computation time {data["computation_time"]}ms and network time {data["network_time"]}ms')
+    time_log[data['uuid']].append((data['computation_time'],data['network_time']))
 
 @socketio.on('connect')
 def connect(auth):
