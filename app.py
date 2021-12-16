@@ -29,8 +29,9 @@ else:
 # Do not log GET/POST requests
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-MIN_BATCH_SIZE = 100
-MAX_BATCH_SIZE = 1000
+MIN_BATCH_SIZE = 500
+MAX_BATCH_SIZE = 5000
+TARGET_TIME = 20  # in seconds
 
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
@@ -131,8 +132,7 @@ def on_gradient_http(uuid, batch_size):
 
     # update client's new batch size
     if elapsed_time > 0:
-        best_time = 12  # TODO: magic number
-        new_batch_size = batch_size * best_time / elapsed_time
+        new_batch_size = batch_size * TARGET_TIME / elapsed_time
         new_batch_size = min(MAX_BATCH_SIZE, max(MIN_BATCH_SIZE, new_batch_size))
         socketio.emit('batch size update', {
         'batchsize': int(new_batch_size)

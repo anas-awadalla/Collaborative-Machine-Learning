@@ -1,16 +1,59 @@
-const INITIAL_BATCH_SIZE = 500;
+const INITIAL_BATCH_SIZE = 1000;
+
+const IMAGE_SIZE = 784;
+const NUM_CLASSES = 10;
+class WebWorkerLoader {
+    constructor(trainImages, trainLabels, trainIndices) {
+        this.trainImages = trainImages;
+        this.trainLabels = trainLabels;
+        this.shuffledTrainIndex = 0;
+        this.trainIndices = trainIndices;
+    }
+
+    nextTrainBatch(batchSize) {
+        return this.nextBatch(
+            batchSize, [this.trainImages, this.trainLabels], () => {
+                this.shuffledTrainIndex =
+                    (this.shuffledTrainIndex + 1) % this.trainIndices.length;
+                return this.trainIndices[this.shuffledTrainIndex];
+            });
+    }
+
+    nextBatch(batchSize, data, index) {
+        const batchImagesArray = new Float32Array(batchSize * IMAGE_SIZE);
+        const batchLabelsArray = new Uint8Array(batchSize * NUM_CLASSES);
+
+        for (let i = 0; i < batchSize; i++) {
+            const idx = index();
+
+            const image =
+                data[0].slice(idx * IMAGE_SIZE, idx * IMAGE_SIZE + IMAGE_SIZE);
+            batchImagesArray.set(image, i * IMAGE_SIZE);
+
+            const label =
+                data[1].slice(idx * NUM_CLASSES, idx * NUM_CLASSES + NUM_CLASSES);
+            batchLabelsArray.set(label, i * NUM_CLASSES);
+        }
+
+        const xs = tf.tensor2d(batchImagesArray, [batchSize, IMAGE_SIZE]);
+        const labels = tf.tensor2d(batchLabelsArray, [batchSize, NUM_CLASSES]);
+
+        return { xs, labels };
+    }
+}
+
 class MnistData {
-    constructor() {
+    constructor(trainImages, trainLabels, trainIndices) {
         this.batchSize = INITIAL_BATCH_SIZE;
-        this.data = new TfMnistData();
-        this.loadPromise = this.data.load();
+        this.data = new WebWorkerLoader(trainImages, trainLabels, trainIndices);
+        // this.loadPromise = this.data.load();
 
         // time how long loading takes
         const startTime = Date.now();
-        this.loadPromise.then(() => {
-            const execTime = Date.now() - startTime;
-            console.log(`Loaded data in ${execTime}ms`);
-        });
+        // this.loadPromise.then(() => {
+        const execTime = Date.now() - startTime;
+        console.log(`Loaded data in ${execTime}ms`);
+        // });
     }
 
     setBatchSize(batchSize) {
@@ -22,7 +65,7 @@ class MnistData {
     }
 
     async getNextBatch() {
-        await this.loadPromise;
+        // await this.loadPromise;
         const { xs, labels } = this.data.nextTrainBatch(this.batchSize);
         return {
             xs,
@@ -45,27 +88,22 @@ class MnistModel {
     async getGradients(xs, ys) {
         await this.loadPromise;
 
-        for (let epoch = 0; epoch < 1; epoch++) {
-            // console.log("Epoch", epoch);
-            const { value, grads } = tf.variableGrads(() => {
-                const predYs = this.model.predict(xs);
-                console.log("Ran forward pass");
-                const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
-                console.log("Computed loss");
-                loss.data().then((l) => console.log("Loss", l));
-                return loss;
-            });
+        const { value, grads } = tf.variableGrads(() => {
+            const predYs = this.model.predict(xs);
+            // console.log("Ran forward pass");
+            const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
+            // console.log("Computed loss");
+            // loss.data().then((l) => console.log("Loss", l));
+            return loss;
+        });
 
-            // console.log('Grad, Epoch', grads, epoch);
-
-            const res = Object.fromEntries(
-                Object.keys(grads).map((variable_Name) => [
-                    variable_Name,
-                    grads[variable_Name].arraySync(),
-                ])
-            );
-            return res;
-        }
+        const res = Object.fromEntries(
+            Object.keys(grads).map((variable_Name) => [
+                variable_Name,
+                grads[variable_Name].arraySync(),
+            ])
+        );
+        return res;
     }
 
     async updateWeights(weightDict) {
@@ -85,9 +123,3 @@ class MnistModel {
         });
     }
 }
-
-const dataloader = new MnistData();
-
-console.log("Initializing Model...");
-const model = new MnistModel();
-console.log("Loaded model");

@@ -77,7 +77,6 @@ Promise.all([
     updateChartFactory("#time-spent", timeSpentSpec),
 ]).then(([timeAccuracyUpdater, timeSpentUpdater]) => {
     updateChart = (graphData) => {
-        console.log('gd', graphData);
         timeAccuracyUpdater(
             graphData.time_accuracy.slice(1).map(([t, a]) => ({
                 time: t,
