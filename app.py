@@ -4,6 +4,7 @@ import sys
 from random import randint
 import requests
 import ssl
+from time import monotonic
 
 from flask import Flask, render_template, request
 from flask_socketio import ConnectionRefusedError, SocketIO
@@ -27,14 +28,19 @@ else:
 # Do not log GET/POST requests
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
+MIN_BATCH_SIZE = 100
+MAX_BATCH_SIZE = 1000
+
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
 socketio = SocketIO(app, ping_interval=25, ping_timeout=25)
 
 # TODO?: technically not thread safe
 num_connections = 0
-connection_counter = 0 # monotonically increases
+connection_counter = 0  # monotonically increases
 sidToUuid = {}  # maps socket id to connection's uuid
+uuidToSid = {}  # maps connection's uuid to socket id
+uuidToGradientTime = {}  # maps uuid to last time server received a gradient from it
 
 model = mnist_model()
 reset_model = False
@@ -104,9 +110,23 @@ def index():
 
 @app.route('/gradient/<uuid>/<int:batch_size>', methods=['POST'])
 def on_gradient_http(uuid, batch_size):
+    receive_time = monotonic()
+    last_time = uuidToGradientTime.get(uuid, receive_time)
+    uuidToGradientTime[uuid] = receive_time
+    elapsed_time = receive_time - last_time
+
     gradients = request.get_json()
     gradients_queue.append((batch_size, gradients))
-    serverlog(f'Received gradients from {uuid} Queue length: {len(gradients_queue)}')
+    serverlog(f'Received gradients from {uuid} (sec={elapsed_time:.1f}) Queue length: {len(gradients_queue)}')
+
+    # update client's new batch size
+    if elapsed_time > 0:
+        best_time = 12  # TODO: magic number
+        new_batch_size = batch_size * best_time / elapsed_time
+        new_batch_size = min(MAX_BATCH_SIZE, max(MIN_BATCH_SIZE, new_batch_size))
+        socketio.emit('batch size update', {
+        'batchsize': int(new_batch_size)
+        }, to=uuidToSid[uuid])
 
     if average_gradients():
         send_parameters()
@@ -122,6 +142,7 @@ def connect(auth):
         raise ConnectionRefusedError('No uuid')
     uuid = auth['uuid']
     sidToUuid[request.sid] = uuid
+    uuidToSid[uuid] = request.sid
     serverlog(f'Connected {uuid} Clients: {num_connections}')
     serverlog(f'Sent current parameters to {uuid}')
     send_parameters()
