@@ -1,4 +1,4 @@
-const INITIAL_BATCH_SIZE = 1000;
+const INITIAL_BATCH_SIZE = 750;
 
 const IMAGE_SIZE = 784;
 const NUM_CLASSES = 10;
@@ -90,9 +90,9 @@ class MnistModel {
 
         const { value, grads } = tf.variableGrads(() => {
             const predYs = this.model.predict(xs);
-            // console.log("Ran forward pass");
+            console.log("Ran forward pass");
             const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
-            // console.log("Computed loss");
+            console.log("Computed loss");
             // loss.data().then((l) => console.log("Loss", l));
             return loss;
         });

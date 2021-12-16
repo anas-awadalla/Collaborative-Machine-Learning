@@ -7,10 +7,14 @@ if ('function' === typeof importScripts) {
 
     let shouldTrain = false;
 
+    const TARGET_TIME = 7 * 1000; // in ms
+    const MIN_BATCH_SIZE = 100;
+    const MAX_BATCH_SIZE = 1200;
+
     let dataloader = null;
-    console.log("Initializing Model...");
+    log("Initializing Model...");
     const model = new MnistModel();
-    console.log("Loaded model");
+    log("Loaded model");
 
     function log(message, type) {
         if (!type) {
@@ -53,10 +57,10 @@ if ('function' === typeof importScripts) {
             log(data.log, log.SERVER);
         });
 
-        socket.on("batch size update", (data) => {
-            dataloader.setBatchSize(data.batchsize);
-            log(`Updated batch size to ${data.batchsize}`);
-        });
+        // socket.on("batch size update", (data) => {
+        //     dataloader.setBatchSize(data.batchsize);
+        //     log(`Updated batch size to ${data.batchsize}`);
+        // });
 
         socket.on("graph data", (data) => {
             postMessage({
@@ -107,7 +111,7 @@ if ('function' === typeof importScripts) {
             body: gradientString,
         });
         const networkTimeTaken = Math.floor(performance.now() - networkStartTime);
-        log(`Sent gradients to server. Size = ${gradientString.length} bytes.`);
+        log(`Sent gradients to server. Size = ${gradientString.length} bytes. Took ${networkTimeTaken}ms`);
 
         // Send timing data and uuid to server
         socket.emit("time log", {
@@ -115,6 +119,11 @@ if ('function' === typeof importScripts) {
             'computation_time': computationTimeTaken,
             'network_time': networkTimeTaken,
         });
+
+        let newBatchSize = Math.floor(dataloader.getBatchSize() * (TARGET_TIME - networkTimeTaken) / computationTimeTaken);
+        newBatchSize = Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, newBatchSize));
+        dataloader.setBatchSize(newBatchSize);
+        log(`Updated batch size to ${newBatchSize}`);
     }
 
     self.addEventListener('message', function({ data }) {
