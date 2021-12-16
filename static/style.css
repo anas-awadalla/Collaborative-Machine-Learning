@@ -10,6 +10,8 @@ body {
     background: #1a1e25;
     color: #abb2bf;
     font: 16px 'Consolas', monospace;
+    display: flex;
+    flex-flow: row wrap;
 }
 
 #log {
@@ -20,6 +22,10 @@ body {
     row-gap: 8px;
     align-items: start;
     overflow-wrap: anywhere;
+    overflow-y: auto;
+    max-height: 100vh;
+    min-width: 65vw;
+    flex: 1;
 }
 
 #log>div {
@@ -40,11 +46,15 @@ body {
     padding: 1px 3px;
 }
 
+#side-panel {
+    display: flex;
+    flex-flow: column wrap;
+    padding: 80px;
+    row-gap: 80px;
+}
+
 #send-data {
-    position: fixed;
-    top: 30px;
-    right: 30px;
-    padding: 50px;
+    padding: 20px;
     font-size: 1em;
 }
 

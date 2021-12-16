@@ -7,7 +7,7 @@ import ssl
 from time import monotonic
 
 from flask import Flask, render_template, request
-from flask_socketio import ConnectionRefusedError, SocketIO
+from flask_socketio import ConnectionRefusedError, SocketIO, emit
 import tensorflow as tf
 
 from model import mnist_model
@@ -55,6 +55,9 @@ if reset_model:
         json.dump(data, f, indent=4)
         f.truncate()
 
+graph_data = {
+    'time_accuracy': [(monotonic(), model.test_model()[1])],  # list of tuples (time, accuracy)
+}
 
 gradients_queue = []  # list of tuples (batch_size, gradient)
 
@@ -100,6 +103,9 @@ def send_parameters():
     })
     serverlog('Sent updated parameters to all clients')
 
+def send_graph_data():
+    socketio.emit('graph data', graph_data)
+
 
 @app.route('/')
 def index():
@@ -115,9 +121,11 @@ def on_gradient_http(uuid, batch_size):
     uuidToGradientTime[uuid] = receive_time
     elapsed_time = receive_time - last_time
 
+    formatted_time = f'(sec={elapsed_time:.1f})' if elapsed_time > 0 else ''
+
     gradients = request.get_json()
     gradients_queue.append((batch_size, gradients))
-    serverlog(f'Received gradients from {uuid} (sec={elapsed_time:.1f}) Queue length: {len(gradients_queue)}')
+    serverlog(f'Received gradients from {uuid} {formatted_time} Queue length: {len(gradients_queue)}')
 
     # update client's new batch size
     if elapsed_time > 0:
@@ -131,7 +139,9 @@ def on_gradient_http(uuid, batch_size):
     if average_gradients():
         send_parameters()
         scores = model.test_model()
+        graph_data['time_accuracy'].append((monotonic() - graph_data['time_accuracy'][0][0], scores[1]))
         serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
+        send_graph_data()
     return ('', 204)
 
 @socketio.on('connect')
@@ -144,8 +154,12 @@ def connect(auth):
     sidToUuid[request.sid] = uuid
     uuidToSid[uuid] = request.sid
     serverlog(f'Connected {uuid} Clients: {num_connections}')
+    model_parameters = model.get_weights()
     serverlog(f'Sent current parameters to {uuid}')
-    send_parameters()
+    emit('parameter update', {
+        'parameters': model_parameters
+    })
+    emit('graph data', graph_data)
 
 @socketio.on('disconnect')
 def test_disconnect():

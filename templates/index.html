@@ -10,15 +10,22 @@
     <link rel="stylesheet" href="static/style.css">
     <script src="static/lib/socket.io.min.js"></script>
     <script src="static/lib/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5.21.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.2"></script>
 </head>
 
 <body>
     <div id="log"></div>
-    <button id='send-data'>Start auto training</button>
+    <div id="side-panel">
+        <button id='send-data'>Start auto training</button>
+        <div id='time-accuracy'></div>
+    </div>
     <script>
         const UUID = '{{ uuid }}'; // replaced by server
     </script>
     <script src="static/lib/loadmnistdata.js"></script>
+    <script src="static/graphing.js"></script>
     <script src="static/model.js"></script>
     <script src="static/main.js"></script>
 </body>

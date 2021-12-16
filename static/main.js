@@ -48,8 +48,12 @@ function log(text, type) {
     logEl.appendChild(time);
     logEl.appendChild(eventType);
     logEl.appendChild(span);
-    document.getElementById("log").appendChild(logEl);
-    window.scrollTo(0, document.body.scrollHeight);
+    const logParent = document.getElementById("log");
+    const atBottom = logParent.offsetHeight + logParent.scrollTop + 100 < logParent.scrollHeight;
+    logParent.appendChild(logEl);
+    if (atBottom) {
+        logParent.scrollTo(0, logParent.scrollHeight);
+    }
     console.log(text);
 }
 log.CLIENT = "client";
@@ -76,6 +80,16 @@ socket.on("disconnect", (reason) => {
 
 socket.on("server log", (data) => {
     log(data.log, log.SERVER);
+});
+
+let graphData = {};
+socket.on("graph data", (data) => {
+    graphData = data;
+    console.log(graphData);
+    updateChart(graphData.time_accuracy.slice(1).map(([t, a]) => ({
+        time: t,
+        accuracy: a,
+    })));
 });
 
 socket.on("batch size update", (data) => {

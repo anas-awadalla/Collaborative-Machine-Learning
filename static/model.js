@@ -46,7 +46,7 @@ class MnistModel {
         await this.loadPromise;
 
         for (let epoch = 0; epoch < 1; epoch++) {
-            console.log("Epoch", epoch);
+            // console.log("Epoch", epoch);
             const { value, grads } = tf.variableGrads(() => {
                 const predYs = this.model.predict(xs);
                 console.log("Ran forward pass");
@@ -64,16 +64,15 @@ class MnistModel {
                     grads[variable_Name].arraySync(),
                 ])
             );
-            console.log('res', res);
             return res;
         }
     }
 
     async updateWeights(weightDict) {
-        console.log("weightDict", weightDict);
+        // console.log("weightDict", weightDict);
         this.model.layers.forEach((layer) => {
             // Set kernel and bias if they exist
-            console.log("layer.name =", layer.name, layer);
+            // console.log("layer.name =", layer.name, layer);
             if (
                 weightDict[layer.name + "/kernel"] &&
                 weightDict[layer.name + "/bias"]
