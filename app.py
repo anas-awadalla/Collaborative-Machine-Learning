@@ -7,7 +7,7 @@ import requests
 import ssl
 from time import monotonic
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response
 from flask_socketio import ConnectionRefusedError, SocketIO, emit
 import tensorflow as tf
 
@@ -137,14 +137,19 @@ def on_gradient_http(uuid, batch_size):
         socketio.emit('batch size update', {
         'batchsize': int(new_batch_size)
         }, to=uuidToSid[uuid])
+    
+    response = Response(status=204)
 
-    if average_gradients():
-        send_parameters()
-        scores = model.test_model()
-        graph_data['time_accuracy'].append((monotonic() - graph_data['time_accuracy'][0][0], scores[1]))
-        serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
-        send_graph_data()
-    return ('', 204)
+    # don't make response wait for averaging gradients to finish
+    @response.call_on_close
+    def on_close():
+        if average_gradients():
+            send_parameters()
+            scores = model.test_model()
+            graph_data['time_accuracy'].append((monotonic() - graph_data['time_accuracy'][0][0], scores[1]))
+            serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
+            send_graph_data()
+    return response
 
 @socketio.on('time log')
 def on_time_log(data):
