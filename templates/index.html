@@ -20,7 +20,11 @@
     <div id="side-panel">
         <button id='send-data'>Start auto training</button>
         <div id='time-accuracy'></div>
-        <input type="text" id="client-slowdown" value="0">
+        <div id='time-spent'></div>
+        <div>
+            <label for="client-slowdown">Client slowdown</label>
+            <input type="number" id="client-slowdown" min="0" max="100" value="0">
+        </div>
     </div>
     <script>
         const UUID = '{{ uuid }}'; // replaced by server

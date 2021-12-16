@@ -52,7 +52,7 @@ function log(text, type) {
     const atBottom = logParent.offsetHeight + logParent.scrollTop + 100 < logParent.scrollHeight;
     logParent.appendChild(logEl);
     if (atBottom) {
-        logParent.scrollTo(0, logParent.scrollHeight);
+        logParent.scrollTo(0, logParent.scrollHeight + 1000);
     }
     console.log(text);
 }
@@ -83,10 +83,7 @@ let graphData = {};
 socket.on("graph data", (data) => {
     graphData = data;
     console.log(graphData);
-    updateChart(graphData.time_accuracy.slice(1).map(([t, a]) => ({
-        time: t,
-        accuracy: a,
-    })));
+    updateChart(graphData);
 });
 
 socket.on("batch size update", (data) => {
@@ -99,6 +96,7 @@ const sendDataButton = document.getElementById("send-data");
 sendDataButton.addEventListener("click", () => {
     shouldTrain = !shouldTrain;
     sendDataButton.innerHTML = shouldTrain ? 'Stop auto-training<br>(currently on)' : 'Start auto training<br>(currently off)';
+    sendDataButton.classList.toggle('off', shouldTrain);
 
     if (shouldTrain) {
         asyncModelUpdate();
@@ -126,11 +124,8 @@ async function asyncModelUpdate() {
     let { xs, ys } = await dataloader.getNextBatch();
     xs = xs.reshape([xs.shape[0], 28, 28, 1]); // Reshape to be 28 28
     const gradients = await model.getGradients(xs, ys);
-    log("End gradient computation");
-    
-    const computationEndTime = performance.now();
-    const computationtimeTaken = computationEndTime - computationStartTime;
-    log(`Gradient computation took ${computationtimeTaken}ms`);
+    const computationTimeTaken = Math.floor(performance.now() - computationStartTime);
+    log(`End gradient computation. Took ${computationTimeTaken}ms`);
 
     let gradientString = JSON.stringify(gradients);
     log(
@@ -146,15 +141,13 @@ async function asyncModelUpdate() {
         },
         body: gradientString,
     });
-    log(`Sent gradients to server`);
-    const networkEndTime = performance.now();
-    const networkTimeTaken = networkEndTime - networkStartTime;
-    log(`Gradient took ${networkTimeTaken}ms to send`);
+    const networkTimeTaken = Math.floor(performance.now() - networkStartTime);
+    log(`Sent gradients to server. Sending took ${networkTimeTaken}ms`);
 
     // Send timing data and uuid to server
     socket.emit("time log", {
         'uuid': UUID,
-        'computation_time': computationtimeTaken,
+        'computation_time': computationTimeTaken,
         'network_time': networkTimeTaken,
     });
 }

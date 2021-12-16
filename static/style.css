@@ -1,3 +1,7 @@
+:root {
+    color-scheme: dark;
+}
+
 *,
  ::before,
  ::after {
@@ -23,6 +27,7 @@ body {
     align-items: start;
     overflow-wrap: anywhere;
     overflow-y: auto;
+    height: min-content;
     max-height: 100vh;
     min-width: 65vw;
     flex: 1;
@@ -49,13 +54,34 @@ body {
 #side-panel {
     display: flex;
     flex-flow: column wrap;
-    padding: 80px;
-    row-gap: 80px;
+    padding: 40px;
+    row-gap: 40px;
 }
 
 #send-data {
     padding: 20px;
     font-size: 1em;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 0;
+    background: forestgreen;
+}
+
+#send-data.off {
+    background: crimson;
+}
+
+label {
+    display: block;
+    padding-bottom: 8px;
+}
+
+#client-slowdown {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    border: 1px solid gray;
+    padding: 8px;
 }
 
 @keyframes flash {

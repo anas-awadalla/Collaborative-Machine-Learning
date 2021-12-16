@@ -25,6 +25,36 @@ const timeAccuracySpec = {
     title: "Model accuracy over time",
 };
 
+const timeSpentSpec = {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    mark: { type: "area" },
+    data: { name: "table" },
+    encoding: {
+        x: {
+            field: "i",
+            type: "quantitative",
+            title: "Step",
+            axis: { tickMinStep: 1 },
+        },
+        y: {
+            field: "value",
+            type: "quantitative",
+            aggregate: "mean",
+            title: "Time (s)",
+            axis: { tickMinStep: 2 },
+        },
+        color: { field: "task", type: "nominal" },
+    },
+    title: "Time spent on computation vs network",
+    config: {
+        background: BG,
+        line: { stroke: FG },
+        axis: { titleColor: FG, labelColor: FG, gridColor: "#444" },
+        legend: { labelColor: FG, titleColor: FG },
+        title: { fill: FG },
+    },
+};
+
 async function updateChartFactory(element, vlSpec) {
     const res = await vegaEmbed(element, vlSpec, {
         renderer: "svg",
@@ -37,8 +67,30 @@ async function updateChartFactory(element, vlSpec) {
         const changeSet = vega.changeset().insert(newData);
         oldData = fullData;
         res.view.change("table", changeSet).run();
+        res.view.resize();
     };
 }
 
 let updateChart = () => {};
-updateChartFactory("#time-accuracy", timeAccuracySpec).then((u) => (updateChart = u));
+Promise.all([
+    updateChartFactory("#time-accuracy", timeAccuracySpec),
+    updateChartFactory("#time-spent", timeSpentSpec),
+]).then(([timeAccuracyUpdater, timeSpentUpdater]) => {
+    updateChart = (graphData) => {
+        console.log('gd', graphData);
+        timeAccuracyUpdater(
+            graphData.time_accuracy.slice(1).map(([t, a]) => ({
+                time: t,
+                accuracy: a,
+            }))
+        );
+        if (graphData.time_log[UUID]) {
+            timeSpentUpdater(
+                graphData.time_log[UUID].map(([ct, nt], i) => [
+                    { task: "network", value: nt / 1000, i },
+                    { task: "computation", value: ct / 1000, i },
+                ]).flat()
+            );
+        }
+    };
+});

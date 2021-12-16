@@ -58,10 +58,10 @@ if reset_model:
 
 graph_data = {
     'time_accuracy': [(monotonic(), model.test_model()[1])],  # list of tuples (time, accuracy)
+    'time_log': defaultdict(list)
 }
 
 gradients_queue = []  # list of tuples (batch_size, gradient)
-time_log = defaultdict(list)
 
 def average_gradients():
     global gradients_queue
@@ -148,8 +148,9 @@ def on_gradient_http(uuid, batch_size):
 
 @socketio.on('time log')
 def on_time_log(data):
-    serverlog(f'Received time log from {data["uuid"]} with computation time {data["computation_time"]}ms and network time {data["network_time"]}ms')
-    time_log[data['uuid']].append((data['computation_time'],data['network_time']))
+    uuid = data["uuid"]
+    serverlog(f'Received time log from {uuid} with computation time {data["computation_time"]}ms and network time {data["network_time"]}ms')
+    graph_data['time_log'][uuid].append((data['computation_time'], data['network_time']))
 
 @socketio.on('connect')
 def connect(auth):
