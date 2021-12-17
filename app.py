@@ -32,16 +32,10 @@ TRIAL_NAME = "2_Equal_Clients_1000_Batch"
 # Do not log GET/POST requests
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-# Change in worker.js
-# MIN_BATCH_SIZE = 100
-# MAX_BATCH_SIZE = 500
-# TARGET_TIME = 20  # in seconds
-
 app = Flask(__name__)
 # TODO: might have to change interval and timeout to decrease delay before disconnect event
 socketio = SocketIO(app, ping_interval=25, ping_timeout=25)
 
-# TODO?: technically not thread safe
 num_connections = 0
 connection_counter = 0  # monotonically increases
 sidToUuid = {}  # maps socket id to connection's uuid
@@ -49,7 +43,7 @@ uuidToSid = {}  # maps connection's uuid to socket id
 uuidToGradientTime = {}  # maps uuid to last time server received a gradient from it
 
 model = mnist_model()
-reset_model = True
+reset_model = False
 if reset_model:
     model.save_weights("static/mnistmodel")
 
@@ -88,9 +82,6 @@ def average_gradients():
             else:
                 model_gradients.append(gradient_tensor)
 
-    # serverlog('Averaging gradients')
-    
-    # print(model_gradients)
     model.update_weights(model_gradients)
 
     serverlog(f'Averaged {len(gradients_queue)} gradients')
@@ -108,7 +99,6 @@ def send_parameters():
     socketio.emit('parameter update', {
         'parameters': model_parameters
     })
-    # serverlog('Sent updated parameters to all clients')
 
 def send_graph_data():
     socketio.emit('graph data', graph_data)
@@ -123,24 +113,8 @@ def index():
 
 @app.route('/gradient/<uuid>/<int:batch_size>', methods=['POST'])
 def on_gradient_http(uuid, batch_size):
-    receive_time = monotonic()
-    last_time = uuidToGradientTime.get(uuid, receive_time)
-    uuidToGradientTime[uuid] = receive_time
-    elapsed_time = receive_time - last_time
-
-
     gradients = request.get_json()
     gradients_queue.append((batch_size, gradients))
-    # formatted_time = f'(sec={elapsed_time:.1f})' if elapsed_time > 0 else ''
-    # serverlog(f'Received gradients from {uuid} {formatted_time} Queue length: {len(gradients_queue)}')
-
-    # update client's new batch size
-    # if elapsed_time > 0:
-    #     new_batch_size = batch_size * TARGET_TIME / elapsed_time
-    #     new_batch_size = min(MAX_BATCH_SIZE, max(MIN_BATCH_SIZE, new_batch_size))
-    #     socketio.emit('batch size update', {
-    #     'batchsize': int(new_batch_size)
-    #     }, to=uuidToSid[uuid])
 
     response = Response(status=204)
 
@@ -170,30 +144,9 @@ def on_gradient_http(uuid, batch_size):
 
     return response
 
-    # if average_gradients():
-    #     send_parameters()
-    #     scores = model.test_model()
-    #     graph_data['time_accuracy'].append((monotonic() - graph_data['time_accuracy'][0][0], scores[0]))
-    #     serverlog(f'Test loss: {scores[0]:.3f} accuracy: {scores[1]:.2f}%')
-    #     send_graph_data()
-    #     if scores[0] < 0.9:
-    #         with open(f'output/{TRIAL_NAME}_ACC.csv', 'w') as csv_file:  
-    #             writer = csv.writer(csv_file)
-    #             for log in graph_data['time_accuracy']:
-    #                 writer.writerow([log[0], log[1]])
-    #         for client in graph_data['time_log']:       
-    #             with open(f'output/{TRIAL_NAME}_{client}.csv', 'w') as csv_file:  
-    #                 writer = csv.writer(csv_file)
-    #                 for log in graph_data['time_log'][client]:
-    #                     writer.writerow([log[0], log[1]])
-
-    #         print("End of test")
-    #         exit(0)
-
 @socketio.on('time log')
 def on_time_log(data):
     uuid = data["uuid"]
-    # serverlog(f'Received time log from {uuid} with computation time {data["computation_time"]}ms and network time {data["network_time"]}ms')
     graph_data['time_log'][uuid].append((data['computation_time'], data['network_time']))
 
 @socketio.on('connect')

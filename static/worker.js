@@ -12,7 +12,6 @@ if ('function' === typeof importScripts) {
     const MAX_BATCH_SIZE = 1200;
 
     let dataloader = null;
-    log("Initializing Model...");
     const model = new MnistModel();
     log("Loaded model");
 
@@ -56,11 +55,6 @@ if ('function' === typeof importScripts) {
         socket.on("server log", (data) => {
             log(data.log, log.SERVER);
         });
-
-        // socket.on("batch size update", (data) => {
-        //     dataloader.setBatchSize(data.batchsize);
-        //     log(`Updated batch size to ${data.batchsize}`);
-        // });
 
         socket.on("graph data", (data) => {
             postMessage({

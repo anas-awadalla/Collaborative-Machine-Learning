@@ -46,14 +46,6 @@ class MnistData {
     constructor(trainImages, trainLabels, trainIndices) {
         this.batchSize = INITIAL_BATCH_SIZE;
         this.data = new WebWorkerLoader(trainImages, trainLabels, trainIndices);
-        // this.loadPromise = this.data.load();
-
-        // time how long loading takes
-        const startTime = Date.now();
-        // this.loadPromise.then(() => {
-        const execTime = Date.now() - startTime;
-        console.log(`Loaded data in ${execTime}ms`);
-        // });
     }
 
     setBatchSize(batchSize) {
@@ -65,7 +57,6 @@ class MnistData {
     }
 
     async getNextBatch() {
-        // await this.loadPromise;
         const { xs, labels } = this.data.nextTrainBatch(this.batchSize);
         return {
             xs,
@@ -93,7 +84,6 @@ class MnistModel {
             console.log("Ran forward pass");
             const loss = tf.losses.softmaxCrossEntropy(ys, predYs);
             console.log("Computed loss");
-            // loss.data().then((l) => console.log("Loss", l));
             return loss;
         });
 
@@ -107,10 +97,8 @@ class MnistModel {
     }
 
     async updateWeights(weightDict) {
-        // console.log("weightDict", weightDict);
         this.model.layers.forEach((layer) => {
             // Set kernel and bias if they exist
-            // console.log("layer.name =", layer.name, layer);
             if (
                 weightDict[layer.name + "/kernel"] &&
                 weightDict[layer.name + "/bias"]
